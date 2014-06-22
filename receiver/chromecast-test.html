@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<meta charset="UTF-8"/>
+<title>chromecast test</title>
+
+
+<script src="//www.gstatic.com/cast/sdk/libs/receiver/2.0.0/cast_receiver.js"></script>
+<script src="//www.gstatic.com/cast/sdk/libs/mediaplayer/0.7.0/media_player.js"></script>
+<script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+<script type="text/javascript">
+
+function addLog(message){
+	console.log(message);
+  $('#log').prepend( $("<div>").text( message) );
+	while( $('#log>div').length > 64 ){
+		$('#log div:last-child').remove();
+	}
+}
+
+window.onload = function(){
+	addLog('receiver app onload');
+	var message_namespace = "urn:x-cast:jp.juggler.TestChromecastAudio.channel";
+
+	var receiver = cast.receiver.CastReceiverManager.getInstance();
+
+	cast.receiver.logger.setLevelValue(0);
+
+	// senderとの接続が開始した
+	receiver.onSenderConnected = function(event) {
+		var sender_id = event.data;
+	  var sender = receiver.getSender(event.data);
+	  addLog('sender connected. id=' + sender_id +',ua='+ sender.userAgent);
+	};
+
+	// senderとの接続が終了した
+	receiver.onSenderDisconnected = function(event) {
+		var sender_id = event.data;
+		var remain = receiver.getSenders().length;
+	  addLog('sender disconnected. id='+sender_id+',remain='+remain);
+	  // senderが0になったら終了する
+	  if( remain == 0 ){
+			addLog("all senders disconnected. close application.");
+			window.close();
+	  }
+	};
+
+	// senderがシステム音量を変更した
+	receiver.onSystemVolumeChanged = function(event) {
+	  addLog('system volume changed. '+JSON.stringify(event.data) );
+	  // event.data['level'] が0-1 の間で音量を表す
+	  // event.data['mute']が真偽値でmute状態を表す
+	};
+
+
+	var customMessageBus = receiver.getCastMessageBus(message_namespace);
+	customMessageBus.onMessage = function(event) {
+	  console.log('onMessage: ' + event.data);
+	  var sender_id = event.senderId;
+	  customMessageBus.send( sender_id,"pong:"+event.data );
+	  addLog( "from:"+sender_id+" message:"+event.data );
+	};
+
+	// handler for the 'ready' event
+	receiver.onReady = function(event) {
+	  addLog('receiver ready. ' + JSON.stringify(event.data));
+	  receiver.setApplicationState("Application status is ready...");
+	};
+
+	// 再生完了時にアプリの状態を変更してみる
+	$('#audio').on('ended',function(ev){ receiver.setApplicationState( "audio_end" ); });
+
+	// initialize the CastReceiverManager with an application status message
+	addLog('receiver start.');
+	receiver.start({statusText: "Application is starting"});
+};
+
+</script>
+
+<style type="text/css">
+body {
+	overflow:hidden;
+	color: #ffffff;
+	background-color:#000000;
+	font-size:20px;
+}
+#log {
+	overflow:hidden;
+}
+</style>
+<body>
+<audio id="audio" src="//juggler.jp/test/test.ogg" autoplay></audio>
+<div id="log"></div>
+</body>
+</html>
