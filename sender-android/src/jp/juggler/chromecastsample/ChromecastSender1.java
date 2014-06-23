@@ -1,5 +1,8 @@
 package jp.juggler.chromecastsample;
 
+import java.lang.ref.WeakReference;
+
+import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v7.media.MediaRouteSelector;
@@ -12,6 +15,7 @@ import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.Cast.ApplicationConnectionResult;
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
@@ -45,8 +49,11 @@ public class ChromecastSender1 {
 	////////////////////////////////////////////////////////////////////
 	// UIのライフサイクルイベントから適切に呼び出すこと
 
-	public void onResume() {
+	WeakReference<Activity> last_activity;
+
+	public void onResume( Activity activity ) {
 		Log.d( TAG, "onResume" );
+		last_activity = new WeakReference<Activity>( activity );
 		route_scan();
 	}
 
@@ -155,6 +162,15 @@ public class ChromecastSender1 {
 		// 接続処理中に接続開始処理を繰り返さないようにするため、選択されたデバイスを覚えておく
 		mSelectedDevice = device;
 
+		// Play開発者サービスの状態を確認する
+		int errorCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable( context );
+		if( errorCode != ConnectionResult.SUCCESS ){
+			Log.d( TAG, "isGooglePlayServicesAvailable failed.err=" + errorCode );
+			route_unselect();
+			GooglePlayServicesUtil.getErrorDialog( errorCode, last_activity.get(), 10 ).show();
+			return;
+		}
+
 		// chromecastとの接続処理を開始する
 		Cast.CastOptions.Builder apiOptionsBuilder = Cast.CastOptions.builder( device, mCastClientListener );
 		apiOptionsBuilder.setVerboseLoggingEnabled( true );
@@ -171,6 +187,9 @@ public class ChromecastSender1 {
 		@Override public void onConnectionFailed( ConnectionResult result ) {
 			Log.d( TAG, "GoogleApiClient onConnectionFailed result=" + result.toString() );
 			route_unselect();
+			//
+			int error_code = result.getErrorCode();
+			GooglePlayServicesUtil.getErrorDialog( error_code, last_activity.get(), 10 ).show();
 		}
 	};
 

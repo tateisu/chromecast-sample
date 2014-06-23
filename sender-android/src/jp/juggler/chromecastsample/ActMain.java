@@ -34,7 +34,7 @@ public class ActMain extends FragmentActivity {
 	@Override protected void onResume() {
 		super.onResume();
 		// 画面表示のタイミングでアクティブスキャンを開始する
-		app.getChromecastSender().onResume();
+		app.getChromecastSender().onResume( this );
 	}
 
 	@Override protected void onPause() {
