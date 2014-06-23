@@ -60,6 +60,8 @@ public class ChromecastSender1 {
 	public void onExit() {
 		Log.d( TAG, "onExit" );
 		mMediaRouter.removeCallback( cb_media_router );
+		route_unselect();
+		client_close();
 	}
 
 	////////////////////////////////////////////////////////////////////
